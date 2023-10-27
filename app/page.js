@@ -1,95 +1,125 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
+import Card from "@/components/Card";
+import Link from "next/link";
+import React, { useEffect, useState } from "react";
 
-export default function Home() {
+//-----------------------------JSX---------------------------
+const page = () => {
+  const [data, setData] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  const getAll = async () => {
+    let res = await fetch(`http://localhost:3000/api/pokemon`);
+    let data = await res.json();
+    setData(data);
+  };
+
+  //return in use effect cause the clean up function
+  useEffect(() => {
+    getAll();
+    const delay = 300; // Adjust the delay as needed
+    const timer = setTimeout(() => {
+      console.log("Api called");
+      setDebouncedSearchQuery(searchQuery);
+    }, delay);
+
+    return () => {
+      console.log("timer clear", searchQuery);
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const filteredData = data.filter((item) => {
+    return item.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+  });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 20;
+  const lastIndex = currentPage * recordsPerPage;
+  const firstIndex = lastIndex - recordsPerPage;
+  let records = filteredData.slice(firstIndex, lastIndex);
+  const nPages = Math.ceil(filteredData.length / recordsPerPage);
+  const numbers = [...Array(nPages + 1).keys()].slice(1);
+
+  const handleSearch = (e) => {
+    setCurrentPage(1);
+    setSearchQuery(e.target.value);
+  };
+
+  const prevPage = () => {
+    if (currentPage !== firstIndex) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const nextPage = () => {
+    if (currentPage !== lastIndex) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const changeCurrentPage = (id) => {
+    setCurrentPage(id);
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="main">
+      <div className="heading">POKEDEX</div>
+      <div className="search-container">
+        <input value={searchQuery} onChange={handleSearch} className="search" />
+        {/* <input value={searchQuery} onChange={betterFn} className="search" /> */}
+      </div>
+      <div className="list-container">
+        {records.map((item) => (
+          <Link
+            key={item.name}
+            className="card-link"
+            href={`/description/${item.name}`}
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
+            <Card name={item.name} />
+          </Link>
+        ))}
       </div>
+      <div className="pagination">
+        <nav aria-label="Page navigation example" className="pagination">
+          {currentPage !== 1 ? (
+            <li className="page-item">
+              <Link className="page-link" href="/" onClick={prevPage}>
+                Prev
+              </Link>
+            </li>
+          ) : (
+            <></>
+          )}
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
+          {numbers.map((number, i) => (
+            <li
+              className={`page-item ${currentPage === number ? "active" : ""}`}
+              key={i}
+            >
+              <Link
+                href="/"
+                className="page-link"
+                onClick={() => changeCurrentPage(number)}
+              >
+                {number}
+              </Link>
+            </li>
+          ))}
+          {currentPage !== nPages ? (
+            <li className="page-item">
+              <Link className="page-link" href="/" onClick={nextPage}>
+                Next
+              </Link>
+            </li>
+          ) : (
+            <></>
+          )}
+        </nav>
       </div>
+    </div>
+  );
+};
 
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
-}
+export default page;
